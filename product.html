@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Product | Zeta Retail Demo</title>
+    <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body data-page="product">
+    <header class="site-header">
+        <nav class="nav" aria-label="Main navigation">
+            <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"></span><span>Zeta Retail Demo</span></a>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="category.html">Shop</a>
+                <a class="cart-pill" href="cart.html">Cart <span data-cart-count>0</span></a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="page">
+        <section class="scenario-strip" aria-live="polite">
+            <span class="label">Scenario</span>
+            <div>
+                <strong data-scenario>Product page viewed</strong>
+                <small data-scenario-detail>Product</small>
+            </div>
+        </section>
+
+        <section class="product-detail" data-product-detail></section>
+
+        <section class="event-panel">
+            <h2>Recent scenario events</h2>
+            <div data-event-log></div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="inner">
+            <span>Zeta Retail Demo</span>
+            <span>Tag testing site</span>
+        </div>
+    </footer>
+
+    <script async type="text/javascript">
+        function zync_call() {
+            var z = document.createElement("script");
+            var zmpID="client-services-sandbox";
+
+            var z_src = "https://live.rezync.com/sync?c=16b6410431b6374e780104abb0443ca8&p=5de2162ee882e78cdc9a8f4cfa6cb5b6&k=client-services-sandbox-pixel-9154&zmpID="+zmpID;
+            z.setAttribute("src", z_src);
+            document.body.appendChild(z);
+        }
+
+        if (['complete', 'interactive'].indexOf(document.readyState) >= 0) {
+            zync_call();
+        } else {
+            window.addEventListener("DOMContentLoaded", function(){
+                zync_call();
+            });
+        }
+    </script>
+    <script src="assets/shop.js"></script>
+</body>
+</html>
