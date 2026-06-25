@@ -40,18 +40,6 @@ a {
     border-bottom: 1px solid var(--line);
 }
 
-/* Keep automated campaign overlays from blocking this tag-testing walkthrough. */
-.preloaded_lightbox,
-[id^="lightbox-"],
-.fb_lightbox-overlay,
-.fb_lightbox-overlay-fixed,
-[id^="sidebar-overlay-lightbox-"],
-iframe[title*="Flash Sale Promotion"] {
-    display: none !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-}
-
 .nav {
     width: min(1120px, calc(100% - 40px));
     min-height: 72px;
