@@ -43,6 +43,9 @@ a {
 /* Keep automated campaign overlays from blocking this tag-testing walkthrough. */
 .preloaded_lightbox,
 [id^="lightbox-"],
+.fb_lightbox-overlay,
+.fb_lightbox-overlay-fixed,
+[id^="sidebar-overlay-lightbox-"],
 iframe[title*="Flash Sale Promotion"] {
     display: none !important;
     visibility: hidden !important;
