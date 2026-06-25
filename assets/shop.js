@@ -42,9 +42,6 @@
     var EVENTS_KEY = "zetaRetailDemoEvents";
     var ORDER_KEY = "zetaRetailDemoLastOrder";
     var USER_KEY = "zetaRetailDemoUser";
-    var ZETA_QUEUE_KEY = "zetaRetailDemoPendingZetaCalls";
-    var pendingZetaCalls = [];
-    var zetaFlushTimer = null;
 
     document.addEventListener("DOMContentLoaded", function () {
         renderFeaturedProducts();
@@ -54,7 +51,6 @@
         renderCheckoutPage();
         renderConfirmationPage();
         renderLoginMenu();
-        restorePendingZetaCalls();
         bindAddButtons();
         updateCartCount();
         recordPageScenario();
@@ -208,99 +204,36 @@
         };
     }
 
-    function serializeArgs(args) {
-        return JSON.parse(JSON.stringify(args, function (key, value) {
-            return typeof value === "function" ? undefined : value;
-        }));
-    }
-
-    function persistPendingZetaCalls() {
-        writeJson(ZETA_QUEUE_KEY, pendingZetaCalls.slice(-20));
-    }
-
-    function restorePendingZetaCalls() {
-        var stored = readJson(ZETA_QUEUE_KEY, []);
-        if (!stored.length) {
-            return;
-        }
-
-        pendingZetaCalls = stored.concat(pendingZetaCalls);
-        persistPendingZetaCalls();
-        startZetaFlushTimer();
-    }
-
-    function callZeta(command, args, label) {
-        var payload = [command].concat(args);
-        var call = {
-            command: command,
-            args: args,
-            label: label,
-            timestamp: new Date().toISOString()
-        };
+    function callBt(command) {
+        var args = Array.prototype.slice.call(arguments, 1);
 
         window.zetaRetailDemo = window.zetaRetailDemo || {
             events: []
         };
         window.zetaRetailDemo.zetaCalls = window.zetaRetailDemo.zetaCalls || [];
-        window.zetaRetailDemo.zetaCalls.push(call);
+        window.zetaRetailDemo.zetaCalls.push({
+            command: command,
+            args: args,
+            timestamp: new Date().toISOString()
+        });
 
         if (typeof window.bt === "function") {
-            try {
-                window.bt.apply(window, payload);
-                return true;
-            } catch (error) {
-                console.warn("[Zeta retail demo] bt call failed", error, call);
-            }
+            console.info("[Zeta retail demo] bt('" + command + "', ...)", args);
+            return window.bt.apply(window, [command].concat(args));
         }
 
-        pendingZetaCalls.push({
-            command: command,
-            args: serializeArgs(args),
-            label: label,
-            timestamp: call.timestamp
-        });
-        persistPendingZetaCalls();
-        startZetaFlushTimer();
-        return false;
-    }
-
-    function startZetaFlushTimer() {
-        var attempts = 0;
-        if (zetaFlushTimer) {
-            return;
-        }
-
-        zetaFlushTimer = window.setInterval(function () {
-            attempts += 1;
-            if (typeof window.bt === "function") {
-                while (pendingZetaCalls.length) {
-                    var call = pendingZetaCalls.shift();
-                    try {
-                        window.bt.apply(window, [call.command].concat(call.args));
-                    } catch (error) {
-                        console.warn("[Zeta retail demo] queued bt call failed", error, call);
-                    }
-                    persistPendingZetaCalls();
-                }
-                window.clearInterval(zetaFlushTimer);
-                zetaFlushTimer = null;
-            }
-
-            if (attempts >= 20) {
-                window.clearInterval(zetaFlushTimer);
-                zetaFlushTimer = null;
-                persistPendingZetaCalls();
-                console.info("[Zeta retail demo] bt was not available; queued calls are visible in window.zetaRetailDemo.zetaCalls.");
-            }
-        }, 500);
+        console.warn("[Zeta retail demo] bt is not available. The call was captured in window.zetaRetailDemo.zetaCalls for review.");
+        return null;
     }
 
     function trackZetaEvent(eventType, properties) {
-        callZeta("track", [
+        // Docs pattern: bt('track', eventType, properties, settings={});
+        callBt(
+            "track",
             eventType,
             compactObject(properties || {}),
             zetaSettings("track " + eventType)
-        ], "track " + eventType);
+        );
     }
 
     function trackUpdatedCart(cart, action, product) {
@@ -357,27 +290,31 @@
             return false;
         }
 
-        callZeta("updateUser", [
-            compactObject({
+        var properties = compactObject({
+            email: email,
+            user_id: email,
+            first_name: user.firstName || "",
+            last_name: user.lastName || "",
+            name: userDisplayName({
                 email: email,
-                user_id: email,
-                first_name: user.firstName || "",
-                last_name: user.lastName || "",
-                name: userDisplayName({
-                    email: email,
-                    firstName: user.firstName,
-                    lastName: user.lastName
-                }),
-                contacts: [{
-                    type: "email",
-                    value: email,
-                    status: "active"
-                }],
-                demo_source: source,
-                signed_up_at: new Date().toISOString()
+                firstName: user.firstName,
+                lastName: user.lastName
             }),
+            contacts: [{
+                type: "email",
+                value: email,
+                status: "active"
+            }],
+            demo_source: source,
+            signed_up_at: new Date().toISOString()
+        });
+
+        // Docs pattern: bt('updateUser', properties, settings={});
+        callBt(
+            "updateUser",
+            properties,
             zetaSettings("updateUser")
-        ], "updateUser");
+        );
         return true;
     }
 
@@ -440,11 +377,20 @@
         holder.querySelector("[data-login-form]").addEventListener("submit", function (event) {
             event.preventDefault();
             var formData = new FormData(event.currentTarget);
-            if (identifyUser({
-                email: formData.get("email"),
-                firstName: formData.get("firstName"),
-                lastName: formData.get("lastName")
-            }, "login_menu")) {
+            var profile = {
+                email: normalizeEmail(formData.get("email")),
+                firstName: String(formData.get("firstName") || "").trim(),
+                lastName: String(formData.get("lastName") || "").trim()
+            };
+
+            if (isValidEmail(profile.email)) {
+                setUser(profile);
+                updateZetaUser(profile, "login_menu");
+                recordScenario("user_identified", {
+                    email: profile.email,
+                    source: "login_menu"
+                });
+                renderEventLog();
                 holder.querySelector("[data-login-panel]").hidden = true;
                 holder.querySelector("[data-login-toggle]").setAttribute("aria-expanded", "false");
             }
