@@ -171,7 +171,8 @@
         return readJson(USER_KEY, {
             email: "",
             firstName: "",
-            lastName: ""
+            lastName: "",
+            phone: ""
         });
     }
 
@@ -236,6 +237,7 @@
                 return sum + item.qty;
             }, 0),
             customer_email: order.customer.email,
+            customer_phone: order.customer.phone,
             currency: "USD"
         });
     }
@@ -259,12 +261,14 @@
 
         var firstName = String(user.firstName || "").trim();
         var lastName = String(user.lastName || "").trim();
+        var phone = String(user.phone || "").trim();
         var name = [firstName, lastName].filter(Boolean).join(" ");
         var properties = compactObject({
             email: email,
             user_id: email,
             first_name: firstName,
             last_name: lastName,
+            phone: phone,
             name: name,
             source: source
         });
@@ -287,7 +291,8 @@
         var profile = {
             email: email,
             firstName: String(user.firstName || "").trim(),
-            lastName: String(user.lastName || "").trim()
+            lastName: String(user.lastName || "").trim(),
+            phone: String(user.phone || "").trim()
         };
 
         setUser(profile);
@@ -319,6 +324,7 @@
             "      <label>First name<input name=\"firstName\" autocomplete=\"given-name\"></label>",
             "      <label>Last name<input name=\"lastName\" autocomplete=\"family-name\"></label>",
             "    </div>",
+            "    <label>Phone<input name=\"phone\" type=\"tel\" autocomplete=\"tel\"></label>",
             "    <button class=\"button primary\" type=\"submit\">Save login</button>",
             "  </form>",
             "</div>"
@@ -340,7 +346,8 @@
             var profile = {
                 email: normalizeEmail(formData.get("email")),
                 firstName: String(formData.get("firstName") || "").trim(),
-                lastName: String(formData.get("lastName") || "").trim()
+                lastName: String(formData.get("lastName") || "").trim(),
+                phone: String(formData.get("phone") || "").trim()
             };
 
             if (isValidEmail(profile.email)) {
@@ -365,6 +372,7 @@
             form.elements.email.value = user.email || "";
             form.elements.firstName.value = user.firstName || "";
             form.elements.lastName.value = user.lastName || "";
+            form.elements.phone.value = user.phone || "";
         }
     }
 
@@ -586,6 +594,7 @@
             "      <label>Last name<input name=\"lastName\" autocomplete=\"family-name\" required value=\"" + escapeHtml(user.lastName || "Morgan") + "\"></label>",
             "    </div>",
             "    <label>Email<input name=\"email\" type=\"email\" autocomplete=\"email\" required value=\"" + escapeHtml(user.email || "alex@example.com") + "\"></label>",
+            "    <label>Phone<input name=\"phone\" type=\"tel\" autocomplete=\"tel\" value=\"" + escapeHtml(user.phone || "555-010-2026") + "\"></label>",
             "    <label>Shipping ZIP<input name=\"zip\" autocomplete=\"postal-code\" required value=\"10001\"></label>",
             "    <button class=\"button primary\" type=\"submit\">Place order</button>",
             "  </form>",
@@ -616,6 +625,7 @@
             email: formData.get("email"),
             firstName: formData.get("firstName"),
             lastName: formData.get("lastName"),
+            phone: formData.get("phone"),
             zip: formData.get("zip")
         };
         var subtotal = cartTotal(cart);
