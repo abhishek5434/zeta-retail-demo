@@ -194,14 +194,21 @@
         return name || user.email || "Sign in";
     }
 
+    function callBt(command) {
+        if (typeof window.bt === "function") {
+            window.bt.apply(window, command);
+            return;
+        }
+
+        window._bt = window._bt || [];
+        window._bt.push(command);
+        console.info("[Zeta retail demo] queued bt command until p13n loads.", command);
+    }
+
     function trackEvent(eventName, payload) {
         payload = compactObject(payload || {});
         console.info("[Zeta retail demo] bt('track', '" + eventName + "', payload)", payload);
-        if (typeof window.bt === "function") {
-            window.bt("track", eventName, payload);
-        } else {
-            console.warn("[Zeta retail demo] bt is not available for track.", eventName, payload);
-        }
+        callBt(["track", eventName, payload]);
     }
 
     function trackUpdatedCart(cart, action, product) {
@@ -274,11 +281,7 @@
         });
 
         console.info("[Zeta retail demo] bt('updateUser', payload)", properties);
-        if (typeof window.bt === "function") {
-            window.bt("updateUser", properties);
-        } else {
-            console.warn("[Zeta retail demo] bt is not available for updateUser.", properties);
-        }
+        callBt(["updateUser", properties]);
         return true;
     }
 
