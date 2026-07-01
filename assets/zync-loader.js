@@ -1,5 +1,7 @@
 (function () {
     var SITE_ID = "client-services-sandbox";
+    var BTI_COOKIE_NAME = "_bti";
+    var BTI_BACKUP_KEY = "zetaRetailDemoBtiBackup";
     var ZYNC_ID_KEY = "zetaRetailDemoZyncExternalId";
     var ZYNC_COOKIE_NAME = "zetaRetailDemoZyncExternalId";
     var P13N_SRC = "https://cdn.boomtrain.com/p13n/" + SITE_ID + "/p13n.min.js";
@@ -41,6 +43,82 @@
         writeCookie(ZYNC_COOKIE_NAME, zyncId);
     }
 
+    function readSessionValue(key) {
+        try {
+            return window.sessionStorage.getItem(key) || "";
+        } catch (error) {
+            return "";
+        }
+    }
+
+    function writeSessionValue(key, value) {
+        try {
+            window.sessionStorage.setItem(key, value);
+        } catch (error) {
+            console.warn("[Zeta retail demo] Unable to write session value.", error);
+        }
+    }
+
+    function parseBti(value) {
+        if (!value) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(value);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function hasValidBsin(value) {
+        var bti = parseBti(value);
+        var bsin = bti && bti.bsin;
+        return Boolean(bsin && String(bsin).toLowerCase() !== "null");
+    }
+
+    function getStoredBti() {
+        return readSessionValue(BTI_BACKUP_KEY) || readCookie(BTI_BACKUP_KEY);
+    }
+
+    function storeBti(value) {
+        if (!hasValidBsin(value)) {
+            return;
+        }
+
+        writeSessionValue(BTI_BACKUP_KEY, value);
+        writeCookie(BTI_BACKUP_KEY, value);
+    }
+
+    function stabilizeBtiCookie() {
+        var currentBti = readCookie(BTI_COOKIE_NAME);
+
+        if (hasValidBsin(currentBti)) {
+            storeBti(currentBti);
+            return;
+        }
+
+        var storedBti = getStoredBti();
+        if (hasValidBsin(storedBti)) {
+            console.info("[Zeta retail demo] Restoring _bti cookie with existing bsin.");
+            writeCookie(BTI_COOKIE_NAME, storedBti);
+        }
+    }
+
+    function watchBtiCookie() {
+        var attempts = 0;
+        stabilizeBtiCookie();
+
+        var timer = window.setInterval(function () {
+            attempts += 1;
+            stabilizeBtiCookie();
+
+            if (attempts >= 40) {
+                window.clearInterval(timer);
+            }
+        }, 500);
+    }
+
     function ensureBtQueue() {
         window.bt = window.bt || function () {
             (window._bt = window._bt || []).push(arguments);
@@ -66,6 +144,7 @@
                 zync: zyncId
             }
         });
+        watchBtiCookie();
     }
 
     function captureZyncInitialize() {
@@ -92,6 +171,7 @@
         }
 
         window.zetaRetailDemoZyncLoaderStarted = true;
+        stabilizeBtiCookie();
 
         var storedZyncId = getStoredZyncId();
         if (storedZyncId) {
@@ -105,6 +185,7 @@
         var script = document.createElement("script");
         script.src = SYNC_SRC;
         document.body.appendChild(script);
+        watchBtiCookie();
     }
 
     if (["complete", "interactive"].indexOf(document.readyState) >= 0) {
