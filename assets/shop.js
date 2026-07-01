@@ -194,29 +194,13 @@
         return name || user.email || "Sign in";
     }
 
-    function trackEvent(eventName, payload, settings) {
+    function trackEvent(eventName, payload) {
         payload = compactObject(payload || {});
         console.info("[Zeta retail demo] bt('track', '" + eventName + "', payload)", payload);
         if (typeof window.bt === "function") {
-            try {
-                if (settings) {
-                    window.bt("track", eventName, payload, settings);
-                } else {
-                    window.bt("track", eventName, payload);
-                }
-            } catch (error) {
-                console.warn("[Zeta retail demo] bt track failed.", error);
-                if (settings && typeof settings.onFailure === "function") {
-                    settings.onFailure(error);
-                } else if (settings && typeof settings.onComplete === "function") {
-                    settings.onComplete();
-                }
-            }
+            window.bt("track", eventName, payload);
         } else {
             console.warn("[Zeta retail demo] bt is not available for track.", eventName, payload);
-            if (settings && typeof settings.onComplete === "function") {
-                settings.onComplete();
-            }
         }
     }
 
@@ -232,8 +216,8 @@
         });
     }
 
-    function trackPurchased(order, onComplete) {
-        var payload = {
+    function trackPurchased(order) {
+        trackEvent("purchased", {
             shoppingCartItems: order.items.map(function (item) {
                 return {
                     id: item.id,
@@ -255,31 +239,7 @@
             customer_email: order.customer.email,
             customer_phone: order.customer.phone,
             currency: "USD"
-        };
-
-        if (typeof onComplete !== "function") {
-            trackEvent("purchased", payload);
-            return;
-        }
-
-        var finished = false;
-        function finishPurchaseTracking() {
-            if (finished) {
-                return;
-            }
-            finished = true;
-            onComplete();
-        }
-
-        trackEvent("purchased", payload, {
-            onComplete: finishPurchaseTracking,
-            onFailure: function (error) {
-                console.warn("[Zeta retail demo] purchased event failed", error);
-                finishPurchaseTracking();
-            }
         });
-
-        window.setTimeout(finishPurchaseTracking, 1500);
     }
 
     function trackViewedResource(detail) {
@@ -683,16 +643,15 @@
         };
 
         writeJson(ORDER_KEY, order);
-        trackPurchased(order, function () {
-            setCart([]);
-            recordScenario("purchased", {
-                order: order.id,
-                email: order.customer.email,
-                items: itemCount(cart),
-                value: order.total
-            });
-            window.location.href = "confirmation.html?order=" + encodeURIComponent(order.id);
+        trackPurchased(order);
+        setCart([]);
+        recordScenario("purchased", {
+            order: order.id,
+            email: order.customer.email,
+            items: itemCount(cart),
+            value: order.total
         });
+        window.location.href = "confirmation.html?order=" + encodeURIComponent(order.id);
     }
 
     function renderConfirmationPage() {

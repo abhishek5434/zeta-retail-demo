@@ -42,7 +42,24 @@
         </div>
     </footer>
 
-    <script src="assets/zync-loader.js"></script>
+    <script async type="text/javascript">
+        function zync_call() {
+            var z = document.createElement("script");
+            var zmpID="client-services-sandbox";
+
+            var z_src = "https://live.rezync.com/sync?c=16b6410431b6374e780104abb0443ca8&p=5de2162ee882e78cdc9a8f4cfa6cb5b6&k=client-services-sandbox-pixel-9154&zmpID="+zmpID;
+            z.setAttribute("src", z_src);
+            document.body.appendChild(z);
+        }
+
+        if (['complete', 'interactive'].indexOf(document.readyState) >= 0) {
+            zync_call();
+        } else {
+            window.addEventListener("DOMContentLoaded", function(){
+                zync_call();
+            });
+        }
+    </script>
     <script src="assets/shop.js"></script>
 </body>
 </html>
