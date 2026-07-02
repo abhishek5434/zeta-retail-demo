@@ -205,10 +205,16 @@
         console.info("[Zeta retail demo] queued bt command until p13n loads.", command);
     }
 
-    function trackEvent(eventName, payload) {
+    function trackEvent(eventName, payload, options) {
         payload = compactObject(payload || {});
         console.info("[Zeta retail demo] bt('track', '" + eventName + "', payload)", payload);
-        callBt(["track", eventName, payload]);
+        var command = ["track", eventName, payload];
+
+        if (options) {
+            command.push(options);
+        }
+
+        callBt(command);
     }
 
     function trackUpdatedCart(cart, action, product) {
@@ -223,7 +229,20 @@
         });
     }
 
-    function trackPurchased(order) {
+    function trackPurchased(order, onComplete) {
+        var finished = false;
+        var finish = function () {
+            if (finished) {
+                return;
+            }
+
+            finished = true;
+
+            if (typeof onComplete === "function") {
+                onComplete();
+            }
+        };
+
         trackEvent("purchased", {
             shoppingCartItems: order.items.map(function (item) {
                 return {
@@ -246,7 +265,14 @@
             customer_email: order.customer.email,
             customer_phone: order.customer.phone,
             currency: "USD"
+        }, {
+            onComplete: finish,
+            onFailure: finish
         });
+
+        if (typeof onComplete === "function") {
+            window.setTimeout(finish, 2000);
+        }
     }
 
     function trackViewedResource(detail) {
@@ -645,8 +671,9 @@
             total: subtotal + 6
         };
 
+        var confirmationUrl = "confirmation.html?order=" + encodeURIComponent(order.id);
+
         writeJson(ORDER_KEY, order);
-        trackPurchased(order);
         setCart([]);
         recordScenario("purchased", {
             order: order.id,
@@ -654,7 +681,9 @@
             items: itemCount(cart),
             value: order.total
         });
-        window.location.href = "confirmation.html?order=" + encodeURIComponent(order.id);
+        trackPurchased(order, function () {
+            window.location.href = confirmationUrl;
+        });
     }
 
     function renderConfirmationPage() {
